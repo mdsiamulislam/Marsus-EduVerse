@@ -11,58 +11,72 @@ Future<void> downloadAndOpenPdf(BuildContext context, String url, String filenam
   final file = File(filePath);
   Dio dio = Dio();
 
-  double progress = 0;
-  late void Function(void Function()) updateDialog;
-
-  // Show progress dialog
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          updateDialog = setState; // Store setState to call from outside
-          return AlertDialog(
-            title: Text("📥 Downloading Book..."),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LinearProgressIndicator(value: progress),
-                SizedBox(height: 12),
-                Text('${(progress * 100).toStringAsFixed(0)}% completed'),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-
-  try {
-    await dio.download(
-      url,
-      filePath,
-      deleteOnError: true,
-      onReceiveProgress: (received, total) {
-        if (total != -1) {
-          progress = received / total;
-          updateDialog(() {}); // Safely update the dialog's UI
-        }
-      },
-    );
-
-    Navigator.pop(context); // Close dialog
-
+  // Check if the file already exists
+  if (await file.exists()) {
+    // If file exists, directly open the PDF
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => SfPdfViewers(pdfUrl: file.path),
       ),
     );
-  } catch (e) {
-    Navigator.pop(context); // Close dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("❌ Download failed: ${e.toString()}")),
+  } else {
+    // If file doesn't exist, download the file and then open it
+    double progress = 0;
+    late void Function(void Function()) updateDialog;
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            updateDialog = setState; // Store setState to call from outside
+            return AlertDialog(
+              title: Text("📥 Downloading Book..."),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(value: progress),
+                  SizedBox(height: 12),
+                  Text('${(progress * 100).toStringAsFixed(0)}% completed'),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
+
+    try {
+      // Start downloading the file
+      await dio.download(
+        url,
+        filePath,
+        deleteOnError: true,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            progress = received / total;
+            updateDialog(() {}); // Safely update the dialog's UI
+          }
+        },
+      );
+
+      Navigator.pop(context); // Close dialog
+
+      // After download, open the PDF
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SfPdfViewers(pdfUrl: file.path),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Close dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Download failed: ${e.toString()}")),
+      );
+    }
   }
 }
