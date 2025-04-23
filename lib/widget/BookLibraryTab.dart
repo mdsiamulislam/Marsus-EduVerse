@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/const/list_of_content.dart';
 
-import '../pages/pdf_viewer.dart';
+import '../helper/download_and_open_pdf.dart';
 
-// 📚 বই ট্যাব
 class BookLibraryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -19,15 +18,9 @@ class BookLibraryTab extends StatelessWidget {
       itemBuilder: (context, index) {
         return GestureDetector(
           onTap: () {
-            // Create navigation to SfPdfViewers page with the PDF link from BookList
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => SfPdfViewers(
-                  pdfUrl: BookList[index]['link']!,
-                ),
-              ),
-            );
+            String pdfUrl = BookList[index]['link']!;
+            String filename = 'book_$index.pdf';
+            downloadAndOpenPdf(context, pdfUrl, filename);
           },
           child: Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

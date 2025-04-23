@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   youtube_player_iframe: ^4.0.4
   syncfusion_flutter_pdfviewer: ^29.1.39
+  dio: ^5.4.0
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:
