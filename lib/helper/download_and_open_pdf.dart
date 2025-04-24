@@ -4,76 +4,85 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../pages/pdf_viewer.dart';
 
-
 Future<void> downloadAndOpenPdf(BuildContext context, String url, String filename) async {
   final dir = await getApplicationDocumentsDirectory();
   final filePath = '${dir.path}/$filename';
   final file = File(filePath);
-  Dio dio = Dio();
+  final dio = Dio();
 
-  // Check if the file already exists
+  // Check if already downloaded
   if (await file.exists()) {
-    // If file exists, directly open the PDF
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => SfPdfViewers(pdfUrl: file.path),
-      ),
+      MaterialPageRoute(builder: (_) => CustomPdfViewerPage(pdfUrl: file.path)),
     );
-  } else {
-    // If file doesn't exist, download the file and then open it
-    double progress = 0;
-    late void Function(void Function()) updateDialog;
+    return;
+  }
 
-    // Show progress dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            updateDialog = setState; // Store setState to call from outside
-            return AlertDialog(
-              title: Text("📥 Downloading Book..."),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LinearProgressIndicator(value: progress),
-                  SizedBox(height: 12),
-                  Text('${(progress * 100).toStringAsFixed(0)}% completed'),
-                ],
-              ),
-            );
-          },
-        );
+  double progress = 0;
+  bool isCancelled = false;
+  late CancelToken cancelToken;
+  late void Function(void Function()) updateDialog;
+
+  cancelToken = CancelToken();
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          updateDialog = setState;
+          return AlertDialog(
+            title: Text("📥 Downloading Book..."),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LinearProgressIndicator(value: progress),
+                SizedBox(height: 12),
+                Text('${(progress * 100).toStringAsFixed(0)}% completed'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  isCancelled = true;
+                  cancelToken.cancel();
+                  Navigator.of(context).pop(); // Close dialog
+                },
+                child: Text("Cancel"),
+              )
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  try {
+    await dio.download(
+      url,
+      filePath,
+      deleteOnError: true,
+      cancelToken: cancelToken,
+      onReceiveProgress: (received, total) {
+        if (total != -1) {
+          progress = received / total;
+          updateDialog(() {});
+        }
       },
     );
 
-    try {
-      // Start downloading the file
-      await dio.download(
-        url,
-        filePath,
-        deleteOnError: true,
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            progress = received / total;
-            updateDialog(() {}); // Safely update the dialog's UI
-          }
-        },
-      );
-
+    if (!isCancelled) {
       Navigator.pop(context); // Close dialog
-
-      // After download, open the PDF
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => SfPdfViewers(pdfUrl: file.path),
-        ),
+        MaterialPageRoute(builder: (_) => CustomPdfViewerPage(pdfUrl: file.path)),
       );
-    } catch (e) {
-      Navigator.pop(context); // Close dialog
+    }
+  } catch (e) {
+    if (!isCancelled) {
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Download failed: ${e.toString()}")),
       );

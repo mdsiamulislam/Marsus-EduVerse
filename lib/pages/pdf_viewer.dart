@@ -1,41 +1,147 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
-class SfPdfViewers extends StatefulWidget {
+class CustomPdfViewerPage extends StatefulWidget {
   final String pdfUrl;
 
-  const SfPdfViewers({required this.pdfUrl});
+  const CustomPdfViewerPage({required this.pdfUrl});
 
   @override
-  State<SfPdfViewers> createState() => _SfPdfViewersState();
+  _CustomPdfViewerPageState createState() => _CustomPdfViewerPageState();
 }
 
-class _SfPdfViewersState extends State<SfPdfViewers> {
-  bool _isLoading = true;
+class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
+  String? localPath;
+  bool fileDownloaded = false;
+  bool errorOccurred = false;
+
+  PDFViewController? _pdfViewController;
+  int totalPages = 0;
+  int currentPage = 0;
+  bool isPDFReady = false;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(milliseconds: 300), () {
+    loadPdf();
+  }
+
+  Future<void> loadPdf() async {
+    try {
+      final filename = widget.pdfUrl.split('/').last;
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/$filename');
+
+      if (await file.exists()) {
+        setState(() {
+          localPath = file.path;
+          fileDownloaded = true;
+        });
+      } else {
+        final response = await Dio().download(widget.pdfUrl, file.path);
+
+        if (response.statusCode == 200) {
+          setState(() {
+            localPath = file.path;
+            fileDownloaded = true;
+          });
+        } else {
+          throw Exception("Download failed");
+        }
+      }
+    } catch (e) {
+      print('PDF Load Error: $e');
       setState(() {
-        _isLoading = false;
+        errorOccurred = true;
       });
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLocal = widget.pdfUrl.startsWith('/');
+    if (errorOccurred) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Error')),
+        body: Center(child: Text('❌ Failed to load PDF')),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text('📖 PDF Viewer')),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : isLocal
-          ? SfPdfViewer.file(File(widget.pdfUrl))
-          : SfPdfViewer.network(widget.pdfUrl),
+      appBar: AppBar(
+        title: Text('📘 PDF Viewer'),
+      ),
+      body: fileDownloaded && localPath != null
+          ? Stack(
+        children: [
+          PDFView(
+            filePath: localPath!,
+            autoSpacing: true,
+            enableSwipe: true,
+            swipeHorizontal: false,
+            onViewCreated: (controller) {
+              _pdfViewController = controller;
+            },
+            onRender: (_pages) {
+              setState(() {
+                totalPages = _pages!;
+                isPDFReady = true;
+              });
+            },
+            onPageChanged: (current, total) {
+              setState(() {
+                currentPage = current!;
+              });
+            },
+            onError: (error) {
+              print("PDF Render Error: $error");
+              setState(() {
+                errorOccurred = true;
+              });
+            },
+          ),
+          // Loading overlay until PDF is ready
+          if (!isPDFReady)
+            Container(
+              color: Colors.white,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text("Loading PDF..."),
+                  ],
+                ),
+              ),
+            ),
+          // Page-specific loading indicator
+          if (isPDFReady)
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  "Page ${currentPage + 1} of $totalPages",
+                  style: TextStyle(color: Colors.black87),
+                ),
+              ),
+            ),
+        ],
+      )
+          : Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 12),
+            Text("Downloading PDF..."),
+          ],
+        ),
+      ),
     );
   }
 }

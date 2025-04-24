@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:untitled/const/list_of_content.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import '../const/list_of_content.dart';
 
 class LectureTab extends StatefulWidget {
   const LectureTab({super.key});
@@ -44,52 +44,93 @@ class _LectureTabState extends State<LectureTab> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 🎬 Animated player section
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          width: MediaQuery.of(context).size.width,
-          height: showPlayer ? MediaQuery.of(context).size.width * 9 / 16 : 0,
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
           child: showPlayer
-              ? YoutubePlayer(
-            controller: _controller,
-            aspectRatio: 16 / 9,
+              ? Container(
+            key: ValueKey(currentVideoId),
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.width * 9 / 16,
+            child: YoutubePlayer(
+              controller: _controller,
+              aspectRatio: 16 / 9,
+            ),
           )
-              : null,
+              : const SizedBox.shrink(),
         ),
 
         const SizedBox(height: 12),
 
-        // 🎞️ List of lectures with thumbnails
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: LecturesList.length,
             itemBuilder: (context, index) {
               final lecture = LecturesList[index];
               final videoId = lecture['youtubeId']!;
               final thumbnailUrl = 'https://img.youtube.com/vi/$videoId/0.jpg';
 
-              return Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(8),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      thumbnailUrl,
-                      width: 100,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
+              return GestureDetector(
+                onTap: () => playVideo(videoId),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  title: Text(
-                    lecture['title']!,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          bottomLeft: Radius.circular(12),
+                        ),
+                        child: Image.network(
+                          thumbnailUrl,
+                          width: 130,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image, size: 50),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                lecture['title']!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              if (lecture.containsKey('subtitle'))
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    lecture['subtitle']!,
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  onTap: () => playVideo(videoId),
                 ),
               );
             },
