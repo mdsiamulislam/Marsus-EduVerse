@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../pages/pdf_viewer.dart';
 
-Future<void> downloadAndOpenPdf(BuildContext context, String url, String filename) async {
+Future<void> downloadAndOpenPdf(BuildContext context, String url, String filename, String title) async {
   final dir = await getApplicationDocumentsDirectory();
   final filePath = '${dir.path}/$filename';
   final file = File(filePath);
@@ -14,7 +14,10 @@ Future<void> downloadAndOpenPdf(BuildContext context, String url, String filenam
   if (await file.exists()) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => CustomPdfViewerPage(pdfUrl: file.path)),
+      MaterialPageRoute(builder: (_) => CustomPdfViewerPage(
+          pdfUrl: file.path,
+        bookName: title,
+      )),
     );
     return;
   }
@@ -77,7 +80,9 @@ Future<void> downloadAndOpenPdf(BuildContext context, String url, String filenam
       Navigator.pop(context); // Close dialog
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => CustomPdfViewerPage(pdfUrl: file.path)),
+        MaterialPageRoute(builder: (_) => CustomPdfViewerPage(pdfUrl: file.path,
+            bookName: title,
+        )),
       );
     }
   } catch (e) {

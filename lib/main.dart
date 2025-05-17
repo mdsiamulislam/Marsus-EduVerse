@@ -9,7 +9,6 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-
     return MaterialApp(
       title: 'Marsus Studyhub',
       theme: ThemeData(
@@ -22,6 +21,7 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
+      debugShowCheckedModeBanner: false,
       home: HomePage(),
     );
   }

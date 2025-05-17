@@ -10,7 +10,8 @@ List<Map<String, dynamic>> fallbackBookList = [
 List<Map<String, dynamic>> fallbackLecturesList = [
   {
     'title': 'Intro to Dart',
-    'url': 'https://example.com/lecture1'
+    'url': 'https://example.com/lecture1',
+    'tag': 'Programming',
   },
 ];
 

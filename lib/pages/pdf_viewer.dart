@@ -6,8 +6,9 @@ import 'package:path_provider/path_provider.dart';
 
 class CustomPdfViewerPage extends StatefulWidget {
   final String pdfUrl;
+  final String bookName;
 
-  const CustomPdfViewerPage({required this.pdfUrl});
+  const CustomPdfViewerPage({required this.pdfUrl , required this.bookName});
 
   @override
   _CustomPdfViewerPageState createState() => _CustomPdfViewerPageState();
@@ -18,7 +19,6 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
   bool fileDownloaded = false;
   bool errorOccurred = false;
 
-  PDFViewController? _pdfViewController;
   int totalPages = 0;
   int currentPage = 0;
   bool isPDFReady = false;
@@ -71,7 +71,7 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('📘 PDF Viewer'),
+        title: Text(widget.bookName),
       ),
       body: fileDownloaded && localPath != null
           ? Stack(
@@ -82,7 +82,6 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
             enableSwipe: true,
             swipeHorizontal: false,
             onViewCreated: (controller) {
-              _pdfViewController = controller;
             },
             onRender: (_pages) {
               setState(() {

@@ -53,6 +53,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
               final image = book['image'];
               final title = book['title']!;
               final author = book['author'] ?? 'Unknown Author';
+              final description = book['description'] ?? '';
               final pdfUrl = book['link']!;
               final filename = 'book_$index.pdf';
 
@@ -62,27 +63,41 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                 borderRadius: BorderRadius.circular(16),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => downloadAndOpenPdf(context, pdfUrl, filename),
+                  onTap: () => downloadAndOpenPdf(context, pdfUrl, filename, title),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                          child: image != null && image.contains('http')
-                              ? FadeInImage.assetNetwork(
-                            placeholder: 'assets/images/placeholder.png',
-                            image: image,
-                            fit: BoxFit.cover,
-                            imageErrorBuilder: (_, __, ___) => Icon(Icons.broken_image, size: 60),
-                          )
-                              : image != null
-                              ? Image.asset(
-                            image,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(Icons.broken_image, size: 60),
-                          )
-                              : Icon(Icons.broken_image, size: 60),
+                          child: Builder(
+                            builder: (context) {
+                              if (image != null && image.startsWith('http')) {
+                                return FadeInImage.assetNetwork(
+                                  placeholder: 'assets/img.png',
+                                  image: image,
+                                  fit: BoxFit.cover,
+                                  imageErrorBuilder: (_, __, ___) {
+                                    return const Center(
+                                      child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                                    );
+                                  },
+                                );
+                              } else if (image != null && image.isNotEmpty) {
+                                return Image.asset(
+                                  image,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                                  ),
+                                );
+                              } else {
+                                return const Center(
+                                  child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                                );
+                              }
+                            },
+                          ),
                         ),
                       ),
                       Padding(
@@ -104,6 +119,16 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                               author,
                               style: TextStyle(
                                 fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
                                 color: Colors.grey[600],
                               ),
                             ),
