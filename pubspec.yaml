@@ -16,6 +16,9 @@ dependencies:
   dio: ^5.4.0
   path_provider: ^2.1.1
   flutter_pdfview: ^1.2.7
+  connectivity_plus: ^5.0.2
+  http: ^1.2.1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

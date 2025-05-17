@@ -1,6 +1,8 @@
+
 import 'package:flutter/material.dart';
 import '../widget/BookLibraryTab.dart';
 import '../widget/LectureTab.dart';
+import '../utils/data_manager.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -9,11 +11,24 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
+  bool _isLoading = true;
 
   final List<Widget> _tabs = [
     BookLibraryTab(),
     LectureTab(),
   ];
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    await checkAndUpdateData();
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,16 +60,19 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        switchInCurve: Curves.easeIn,
-        switchOutCurve: Curves.easeOut,
-        child: _tabs[_currentIndex],
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          child: _tabs[_currentIndex],
+        ),
       ),
-
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
@@ -71,7 +89,7 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: Colors.white,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           onTap: (index) {
             if (_currentIndex != index) {
               setState(() => _currentIndex = index);
