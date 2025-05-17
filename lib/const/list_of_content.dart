@@ -15,5 +15,16 @@ List<Map<String, dynamic>> fallbackLecturesList = [
   },
 ];
 
+List<Map<String, dynamic>> fallbackBlogList = [
+  {
+    'title': 'Intro to Dart',
+    'description': 'Learn the basics of Dart programming language.',
+    'image': 'https://example.com/lecture1',
+    'link': 'https://example.com/lecture1',
+    'tag': 'Programming',
+  },
+];
+
 List<Map<String, dynamic>> BookList = [];
 List<Map<String, dynamic>> LecturesList = [];
+List<Map<String, dynamic>> BlogList = [];

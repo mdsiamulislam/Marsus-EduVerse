@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:marsus_studyhub/widget/BlogTab.dart';
 import 'package:upgrader/upgrader.dart';
 import '../widget/BookLibraryTab.dart';
 import '../widget/LectureTab.dart';
@@ -18,6 +19,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _tabs = [
     BookLibraryTab(),
     LectureTab(),
+    Blogtab()
   ];
 
   Future<void> _loadData() async {
@@ -39,7 +41,7 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Marsus Studyhub',
+            'Marsus EduVerse',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -110,6 +112,10 @@ class _HomePageState extends State<HomePage> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.play_circle_fill_rounded),
                 label: 'Lectures',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.article_rounded),
+                label: 'Blogs',
               ),
             ],
           ),

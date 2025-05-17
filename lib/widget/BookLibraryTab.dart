@@ -76,7 +76,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                                 return FadeInImage.assetNetwork(
                                   placeholder: 'assets/img.png',
                                   image: image,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.fitHeight,
                                   imageErrorBuilder: (_, __, ___) {
                                     return const Center(
                                       child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
@@ -86,7 +86,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                               } else if (image != null && image.isNotEmpty) {
                                 return Image.asset(
                                   image,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.fitHeight,
                                   errorBuilder: (_, __, ___) => const Center(
                                     child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
                                   ),
@@ -122,16 +122,22 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                                 color: Colors.grey[600],
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
+                            if (description.isNotEmpty)
+                              Column(
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    description,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              )
+
                           ],
                         ),
                       ),

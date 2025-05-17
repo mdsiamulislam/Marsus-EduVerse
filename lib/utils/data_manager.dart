@@ -20,13 +20,16 @@ Future<void> checkAndUpdateData() async {
 
         final fetchedBookList = List<Map<String, dynamic>>.from(jsonData['BookList']);
         final fetchedLecturesList = List<Map<String, dynamic>>.from(jsonData['LecturesList '] ?? []);
+        final fetchedBlogList = List<Map<String, dynamic>>.from(jsonData['BlogList'] ?? []);
 
         BookList = fetchedBookList;
         LecturesList = fetchedLecturesList;
+        BlogList = fetchedBlogList;
 
         // Save locally
         await prefs.setString('book_list', jsonEncode(BookList));
         await prefs.setString('lecture_list', jsonEncode(LecturesList));
+        await prefs.setString('blog_list', jsonEncode(BlogList));
       }
     } catch (e) {
       print("API Fetch error: $e");
@@ -46,5 +49,12 @@ Future<void> checkAndUpdateData() async {
         jsonDecode(prefs.getString('lecture_list')!));
   } else {
     LecturesList = fallbackLecturesList;
+  }
+
+  if (prefs.containsKey('blog_list')) {
+    BlogList = List<Map<String, dynamic>>.from(
+        jsonDecode(prefs.getString('blog_list')!));
+  } else {
+    BlogList = fallbackBlogList;
   }
 }

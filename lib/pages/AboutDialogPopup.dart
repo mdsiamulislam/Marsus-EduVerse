@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const String appName = "Islamic Resource Hub"; // Update with your app name
 
 class AboutDialogPopup extends StatelessWidget {
   const AboutDialogPopup({super.key});
@@ -51,10 +50,9 @@ class AboutDialogPopup extends StatelessWidget {
                 launchUrl(Uri.parse("https://marsus.com.bd/videos-2/"));
               },
               child: const Text(
-                "✍️ Author: marsus.com.bd",
+                "✍️ Author: Engr. Khandaker Marsus",
                 style: TextStyle(
                   color: Colors.blue,
-                  decoration: TextDecoration.underline,
                 ),
               ),
             ),
@@ -64,16 +62,26 @@ class AboutDialogPopup extends StatelessWidget {
                 launchUrl(Uri.parse("https://github.com/mdsiamulislam"));
               },
               child: const Text(
-                "🌐 Developer: github.com/mdsiamulislam",
+                "</> Developer: Md Siamul Islam Soaib",
                 style: TextStyle(
                   color: Colors.blue,
-                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                launchUrl(Uri.parse("http://iom.edu.bd/"));
+              },
+              child: const Text(
+                "🌐 IOM: Islamic Online Madrasah",
+                style: TextStyle(
+                  color: Colors.blue,
                 ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              "© 2025 $appName. All rights reserved.",
+              "© 2025 Marsus EduVerse. All rights reserved.",
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],

@@ -184,12 +184,36 @@ class _LectureTabState extends State<LectureTab> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                lecture['tag']!,
+                                lecture['description']!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 14,
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              // Design for tag
+                              if (lecture.containsKey('tag'))
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.green,
+                                      width: 1.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    lecture['tag']!,
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               if (lecture.containsKey('subtitle'))
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
