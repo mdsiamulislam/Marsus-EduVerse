@@ -68,12 +68,25 @@ class AboutDialogPopup extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 4),
             GestureDetector(
               onTap: () {
                 launchUrl(Uri.parse("http://iom.edu.bd/"));
               },
               child: const Text(
                 "🌐 IOM: Islamic Online Madrasah",
+                style: TextStyle(
+                  color: Colors.blue,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: () {
+                launchUrl(Uri.parse("https://marsus.com.bd/marsus-eduverse-privacy-policy"));
+              },
+              child: const Text(
+                "🔏 Privacy & Policy",
                 style: TextStyle(
                   color: Colors.blue,
                 ),
