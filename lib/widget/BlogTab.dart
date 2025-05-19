@@ -13,11 +13,20 @@ class _BlogtabState extends State<Blogtab> {
   String selectedTag = 'All';
 
   Future<void> _launchURL(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw 'Could not launch $url';
+    try {
+      final uri = Uri.parse(url);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the blog link.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
+
 
   List<String> getAllTags() {
     final tags = BlogList.map((e) => e['tag'].toString()).toSet().toList();
@@ -169,8 +178,16 @@ class _BlogtabState extends State<Blogtab> {
                             const SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () => _launchURL(blog['link']),
+                              child: ElevatedButton.icon(onPressed: () {
+                                final link = blog['link'];
+                                if (link != null && link.toString().startsWith('http')) {
+                                  _launchURL(link);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Invalid or missing blog link.')),
+                                  );
+                                }
+                              },
                                 icon: const Icon(Icons.open_in_new, color: Colors.white),
                                 label: const Text('Read More'),
                                 style: ElevatedButton.styleFrom(
