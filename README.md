@@ -36,7 +36,7 @@
 
 ---
 
-### 🛠️ Technical Stack _(Optional)_
+### 🛠️ Technical Stack
 
 - Built with: Flutter (Android)
 - Backend: Google Sheet
