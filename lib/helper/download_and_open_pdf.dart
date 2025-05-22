@@ -2,22 +2,37 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../pages/pdf_viewer.dart';
 
-Future<void> downloadAndOpenPdf(BuildContext context, String url, String filename, String title) async {
+Future<void> downloadAndOpenPdf(
+    BuildContext context, String url, String filename, String title) async {
   final dir = await getApplicationDocumentsDirectory();
   final filePath = '${dir.path}/$filename';
   final file = File(filePath);
   final dio = Dio();
+  final prefs = await SharedPreferences.getInstance();
+  final storedUrlKey = 'pdf_url_$filename';
 
-  // Check if already downloaded
+  final savedUrl = prefs.getString(storedUrlKey);
+
+  // ✅ যদি ফাইল থাকে এবং URL পরিবর্তিত হয়
+  if (await file.exists()) {
+    if (savedUrl != null && savedUrl != url) {
+      await file.delete();
+    }
+  }
+
+  // ✅ আবার চেক করো ফাইল এখনো আছে কিনা (ডিলিট না হলে)
   if (await file.exists()) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => CustomPdfViewerPage(
+      MaterialPageRoute(
+        builder: (_) => CustomPdfViewerPage(
           pdfUrl: file.path,
-        bookName: title,
-      )),
+          bookName: title,
+        ),
+      ),
     );
     return;
   }
@@ -51,7 +66,7 @@ Future<void> downloadAndOpenPdf(BuildContext context, String url, String filenam
                 onPressed: () {
                   isCancelled = true;
                   cancelToken.cancel();
-                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop();
                 },
                 child: Text("Cancel"),
               )
@@ -77,12 +92,16 @@ Future<void> downloadAndOpenPdf(BuildContext context, String url, String filenam
     );
 
     if (!isCancelled) {
-      Navigator.pop(context); // Close dialog
+      await prefs.setString(storedUrlKey, url); // 🔐 নতুন URL সংরক্ষণ করো
+      Navigator.pop(context);
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => CustomPdfViewerPage(pdfUrl: file.path,
+        MaterialPageRoute(
+          builder: (_) => CustomPdfViewerPage(
+            pdfUrl: file.path,
             bookName: title,
-        )),
+          ),
+        ),
       );
     }
   } catch (e) {

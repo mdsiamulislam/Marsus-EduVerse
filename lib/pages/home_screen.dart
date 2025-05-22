@@ -1,10 +1,9 @@
-
 import 'package:flutter/material.dart';
-import 'package:marsus_studyhub/widget/BlogTab.dart';
 import 'package:upgrader/upgrader.dart';
+
 import '../widget/BookLibraryTab.dart';
 import '../widget/LectureTab.dart';
-import '../utils/data_manager.dart';
+import '../widget/BlogTab.dart';
 import 'AboutDialogPopup.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,15 +15,8 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   bool _isLoading = true;
 
-  final List<Widget> _tabs = [
-    BookLibraryTab(),
-    LectureTab(),
-    Blogtab()
-  ];
-
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    await checkAndUpdateData();
     setState(() => _isLoading = false);
   }
 
@@ -33,6 +25,12 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadData();
   }
+
+  List<Widget> _buildTabs() => [
+    BookLibraryTab(),
+    LectureTab(),
+    Blogtab()
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +75,7 @@ class _HomePageState extends State<HomePage> {
             duration: const Duration(milliseconds: 300),
             switchInCurve: Curves.easeIn,
             switchOutCurve: Curves.easeOut,
-            child: _tabs[_currentIndex],
+            child: _buildTabs()[_currentIndex],
           ),
         ),
         bottomNavigationBar: Container(

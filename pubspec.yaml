@@ -21,6 +21,7 @@ dependencies:
   shared_preferences: ^2.2.2
   url_launcher: ^6.1.10
   upgrader: ^11.3.2
+  shimmer: ^3.0.0
 
 
 dev_dependencies:

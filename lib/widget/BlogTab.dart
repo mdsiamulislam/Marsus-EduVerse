@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../const/list_of_content.dart';
+import '../utils/data_manager.dart';
 
 class Blogtab extends StatefulWidget {
   const Blogtab({super.key});

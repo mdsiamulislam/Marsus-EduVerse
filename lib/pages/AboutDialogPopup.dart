@@ -1,10 +1,36 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
 class AboutDialogPopup extends StatelessWidget {
   const AboutDialogPopup({super.key});
+
+  Future<void> _resetAppData(BuildContext context) async {
+    try {
+      // Clear SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // Delete all files from app's document directory
+      final dir = await getApplicationDocumentsDirectory();
+      if (await dir.exists()) {
+        dir.deleteSync(recursive: true);
+      }
+
+      // Optional: show confirmation
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ App data cleared successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed to clear data: $e")),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +131,36 @@ class AboutDialogPopup extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text("Close"),
         ),
+        TextButton(
+          onPressed: (){
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text("⚠️ Confirm Reset"),
+                content: const Text("Are you sure ? You want to delete all app data?"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _resetAppData(context);
+                    },
+                    child: const Text("Yes, Reset",
+                      style: TextStyle(color: Colors.white),),
+                  ),
+                ],
+              ),
+            );
+          },
+          child: const Text("Hard Reset"),
+        ),
+        // Hard Reset Button that clear all app data
       ],
     );
   }
