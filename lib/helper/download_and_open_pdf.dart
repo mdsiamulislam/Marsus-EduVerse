@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
@@ -16,14 +17,14 @@ Future<void> downloadAndOpenPdf(
 
   final savedUrl = prefs.getString(storedUrlKey);
 
-  // ✅ যদি ফাইল থাকে এবং URL পরিবর্তিত হয়
+  // If file exists but URL has changed, delete the file
   if (await file.exists()) {
     if (savedUrl != null && savedUrl != url) {
       await file.delete();
     }
   }
 
-  // ✅ আবার চেক করো ফাইল এখনো আছে কিনা (ডিলিট না হলে)
+  // If file still exists, open it directly
   if (await file.exists()) {
     Navigator.push(
       context,
@@ -44,6 +45,7 @@ Future<void> downloadAndOpenPdf(
 
   cancelToken = CancelToken();
 
+  // Show downloading dialog with progress
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -52,13 +54,39 @@ Future<void> downloadAndOpenPdf(
         builder: (context, setState) {
           updateDialog = setState;
           return AlertDialog(
-            title: Text("📥 Downloading Book..."),
+            title: Row(
+              children: [
+                Icon(Icons.download_outlined, color: Colors.blue), // your icon
+                SizedBox(width: 8),
+                Text("Downloading..."),
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 LinearProgressIndicator(value: progress),
                 SizedBox(height: 12),
-                Text('${(progress * 100).toStringAsFixed(0)}% completed'),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_download_outlined,
+                      color: Colors.blue,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      "${(progress * 100).toStringAsFixed(0)}%",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                )
               ],
             ),
             actions: [
@@ -92,8 +120,8 @@ Future<void> downloadAndOpenPdf(
     );
 
     if (!isCancelled) {
-      await prefs.setString(storedUrlKey, url); // 🔐 নতুন URL সংরক্ষণ করো
-      Navigator.pop(context);
+      await prefs.setString(storedUrlKey, url); // Save new URL
+      Navigator.pop(context); // Close download dialog
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -106,10 +134,18 @@ Future<void> downloadAndOpenPdf(
     }
   } catch (e) {
     if (!isCancelled) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Download failed: ${e.toString()}")),
-      );
+      Navigator.pop(context); // Close download dialog on error
+
+      // Log error for developer
+      print("❌ Download failed: ${e.toString()}");
+
+      // Show floating error snackbar to user
+      AnimatedSnackBar.material(
+        'This file is not available for download. Please try again later.',
+        type: AnimatedSnackBarType.error,
+        duration: Duration(seconds: 6),
+        mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+      ).show(context);
     }
   }
 }

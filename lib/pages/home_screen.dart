@@ -43,6 +43,7 @@ class _HomePageState extends State<HomePage> {
       dialogStyle: UpgradeDialogStyle.material,
       child: Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: const Text(
             'Marsus EduVerse',
             style: TextStyle(

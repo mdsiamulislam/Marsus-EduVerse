@@ -22,6 +22,7 @@ dependencies:
   url_launcher: ^6.1.10
   upgrader: ^11.3.2
   shimmer: ^3.0.0
+  animated_snack_bar: ^0.4.0
 
 
 dev_dependencies:
