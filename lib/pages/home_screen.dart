@@ -17,8 +17,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+
+    // Simulate network delay or data fetching
+    await Future.delayed(const Duration(seconds: 2));
+
     setState(() => _isLoading = false);
   }
+
 
   @override
   void initState() {
