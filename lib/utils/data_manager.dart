@@ -94,6 +94,41 @@ class DataManager {
           await _processListUpdates(localLecturesList, fetchedLecturesList);
           await _processListUpdates(localBlogList, fetchedBlogList);
 
+          // 🔽 Update image URLs to local paths
+          for (var book in fetchedBookList) {
+            final imageUrl = book['image'];
+            final imageFileName = imageUrl.split('/').last;
+
+            final oldBook = localBookList.firstWhere(
+                  (b) => b['id'] == book['id'],
+              orElse: () => {},
+            );
+
+            bool shouldDownload = true;
+
+            if (oldBook.isNotEmpty && oldBook['image'] != null) {
+              final oldImageUrl = oldBook['image'];
+              if (oldImageUrl != imageUrl) {
+                final oldImageFile = oldImageUrl.split('/').last;
+                await deleteLocalFile(oldImageFile);
+              } else {
+                shouldDownload = false;
+                final existingPath = await _localFile(imageFileName);
+                if (await existingPath.exists()) {
+                  book['image'] = existingPath.path;
+                }
+              }
+            }
+
+            if (shouldDownload) {
+              final localPath = await downloadAndSaveFile(imageUrl, imageFileName);
+              if (localPath != null) {
+                book['image'] = localPath;
+              }
+            }
+          }
+
+          // 🔽 Save and assign updated lists
           BookList = fetchedBookList;
           LecturesList = fetchedLecturesList;
           BlogList = fetchedBlogList;
@@ -110,6 +145,7 @@ class DataManager {
       }
     }
 
+    // 🔽 No internet or failed fetch, load from local
     BookList = localBookList;
     LecturesList = localLecturesList;
     BlogList = localBlogList;

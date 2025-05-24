@@ -45,10 +45,6 @@ class _BlogtabState extends State<Blogtab> {
     final tags = getAllTags();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Blogs'),
-        centerTitle: true,
-      ),
       body: Column(
         children: [
           // Tag Filter Chips

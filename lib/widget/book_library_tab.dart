@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../helper/download_and_open_pdf.dart';
-import '../helper/universal_shimmer.dart';
 import '../utils/data_manager.dart';
 
 class BookLibraryTab extends StatefulWidget {
+  const BookLibraryTab({super.key});
+
   @override
   _BookLibraryTabState createState() => _BookLibraryTabState();
 }
@@ -12,6 +15,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
   String _searchQuery = '';
   bool _isLoading = true;
   List<Map<String, dynamic>> _filteredBooks = [];
+
 
   @override
   void initState() {
@@ -22,7 +26,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
   void _loadData() async {
     setState(() => _isLoading = true);
     await DataManager.checkAndUpdateData(context);
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 200));
     _updateFilteredBooks();
     setState(() => _isLoading = false);
   }
@@ -42,13 +46,12 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
       children: [
         _buildSearchBar(),
         Expanded(
-          child: UniversalShimmer(
-            isLoading: _isLoading,
-            shimmerChild: _buildShimmerGrid(),
-            child: _filteredBooks.isEmpty
-                ? _buildEmptyState()
-                : _buildBookGrid(_filteredBooks),
-          ),
+          // UniversalShimmer বাদ দেওয়া হয়েছে
+          child: _isLoading
+              ? Center(child: CircularProgressIndicator()) // লোডিং ইন্ডিকেটর
+              : _filteredBooks.isEmpty
+              ? _buildEmptyState()
+              : _buildBookGrid(_filteredBooks),
         ),
       ],
     );
@@ -91,24 +94,6 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
     );
   }
 
-  Widget _buildShimmerGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 6,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.65,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemBuilder: (_, __) => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
-    );
-  }
 
   Widget _buildBookGrid(List<Map<String, dynamic>> books) {
     return GridView.builder(
@@ -179,10 +164,21 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
       );
     }
 
+    final isNetworkImage = url.startsWith('http');
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: Image.network(
+      child: isNetworkImage
+          ? Image.network(
         url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.broken_image, size: 64, color: Colors.grey),
+        ),
+      )
+          : Image.file(
+        File(url),
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
           color: Colors.grey[200],
@@ -191,4 +187,5 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
       ),
     );
   }
+
 }
