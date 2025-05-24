@@ -166,6 +166,7 @@ class _BlogtabState extends State<Blogtab> {
                             const SizedBox(height: 8),
                             Text(
                               blog['description'],
+                              maxLines: 15,
                               style: const TextStyle(
                                 fontSize: 15,
                                 color: Colors.black87,
