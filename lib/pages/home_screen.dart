@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:upgrader/upgrader.dart';
 
@@ -10,33 +11,45 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   bool _isLoading = true;
+  bool _hasInternet = false;
 
-  // Keep widget instances here
-  late final List<Widget> _tabs;
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-
-    // Simulate network delay or data fetching
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() => _isLoading = false);
-  }
+  late List<Widget> _tabs;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    checkConnectivityAndSetTabs();
+  }
 
-    // Only create once
-    _tabs = [
-      BookLibraryTab(),
-      LectureTab(),
-      Blogtab(),
-    ];
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> checkConnectivityAndSetTabs() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    _hasInternet = connectivityResult != ConnectivityResult.none;
+
+    setState(() {
+      _tabs = [
+        BookLibraryTab(),
+        if (_hasInternet) LectureTab(),
+        if (_hasInternet) Blogtab(),
+        if (!_hasInternet)
+          Center(
+            child: Text(
+              'No Internet Connection',
+              style: TextStyle(fontSize: 18, color: Colors.red),
+            ),
+          ),
+      ];
+    });
   }
 
   @override
@@ -79,11 +92,9 @@ class _HomePageState extends State<HomePage> {
           onRefresh: _loadData,
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            switchInCurve: Curves.easeIn,
-            switchOutCurve: Curves.easeOut,
-            child: _tabs[_currentIndex],
+              : IndexedStack(
+            index: _currentIndex,
+            children: _tabs,
           ),
         ),
         bottomNavigationBar: ClipRRect(
@@ -119,7 +130,8 @@ class _HomePageState extends State<HomePage> {
                   setState(() => _currentIndex = index);
                 }
               },
-              items: const [
+              items: _hasInternet
+                  ? [
                 BottomNavigationBarItem(
                   icon: Icon(Icons.menu_book_rounded),
                   label: 'Reading',
@@ -132,6 +144,16 @@ class _HomePageState extends State<HomePage> {
                   icon: Icon(Icons.article_rounded),
                   label: 'Blogs',
                 ),
+              ]
+                  : [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.menu_book_rounded),
+                  label: 'Reading',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.warning_amber_rounded),
+                  label: 'No Internet',
+                ),
               ],
             ),
           ),
@@ -140,4 +162,5 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
 

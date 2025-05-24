@@ -52,105 +52,100 @@ class DataManager {
     return null;
   }
 
+  static bool _isSameData(List<Map<String, dynamic>> oldList, List<Map<String, dynamic>> newList) {
+    return jsonEncode(oldList) == jsonEncode(newList);
+  }
+
+  static Future<void> _processImages(
+      List<Map<String, dynamic>> newList,
+      List<Map<String, dynamic>> oldList,
+      ) async {
+    for (var item in newList) {
+      final imageUrl = item['image'];
+      final fileName = imageUrl.split('/').last;
+
+      final oldItem = oldList.firstWhere((e) => e['id'] == item['id'], orElse: () => {});
+      bool shouldDownload = true;
+
+      if (oldItem.isNotEmpty && oldItem['image'] != null) {
+        if (oldItem['image'] == imageUrl) {
+          shouldDownload = false;
+          final existingPath = await _localFile(fileName);
+          if (await existingPath.exists()) {
+            item['image'] = existingPath.path;
+          }
+        } else {
+          final oldImageFile = oldItem['image']?.split('/').last ?? '';
+          await deleteLocalFile(oldImageFile);
+        }
+      }
+
+      if (shouldDownload) {
+        final localPath = await downloadAndSaveFile(imageUrl, fileName);
+        if (localPath != null) {
+          item['image'] = localPath;
+        }
+      }
+    }
+  }
+
+
+
   static Future<void> checkAndUpdateData(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final connectivityResult = await Connectivity().checkConnectivity();
-    final isFirstTime = !prefs.containsKey('book_list');
 
-    if (isFirstTime && connectivityResult == ConnectivityResult.none) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("ইন্টারনেট সংযোগ প্রয়োজন"),
-          content: const Text("প্রথমবার অ্যাপ ব্যবহারের জন্য ইন্টারনেট সংযোগ আবশ্যক।"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("ঠিক আছে"),
-            )
-          ],
-        ),
-      );
+    // 🔹 Step 1: Load local data first and show instantly
+    BookList = _loadLocalData(prefs, 'book_list', fallbackBookList);
+    LecturesList = _loadLocalData(prefs, 'lecture_list', fallbackLecturesList);
+    BlogList = _loadLocalData(prefs, 'blog_list', fallbackBlogList);
+    print('✅ Local data loaded');
+
+    // 🔹 Step 2: If no internet, stop here silently
+    if (connectivityResult == ConnectivityResult.none) {
       return;
     }
 
-    final localBookList = _loadLocalData(prefs, 'book_list', fallbackBookList);
-    final localLecturesList = _loadLocalData(prefs, 'lecture_list', fallbackLecturesList);
-    final localBlogList = _loadLocalData(prefs, 'blog_list', fallbackBlogList);
+    // 🔹 Step 3: Fetch from server in background
+    try {
+      final response = await http.get(Uri.parse(
+        'https://script.google.com/macros/s/AKfycbz24xdGvbElygR1B24k8MQf0DKcrcAtoPn0VMI2VopmUjL7JqM7O38R98ivENqCEtjhJQ/exec',
+      ));
 
-    if (connectivityResult != ConnectivityResult.none) {
-      try {
-        final response = await http.get(Uri.parse(
-          'https://script.google.com/macros/s/AKfycbz24xdGvbElygR1B24k8MQf0DKcrcAtoPn0VMI2VopmUjL7JqM7O38R98ivENqCEtjhJQ/exec',
-        ));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final fetchedBookList = List<Map<String, dynamic>>.from(data['BookList']);
+        final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
+        final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final fetchedBookList = List<Map<String, dynamic>>.from(data['BookList']);
-          final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
-          final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
-
-          await _processListUpdates(localBookList, fetchedBookList);
-          await _processListUpdates(localLecturesList, fetchedLecturesList);
-          await _processListUpdates(localBlogList, fetchedBlogList);
-
-          // 🔽 Update image URLs to local paths
-          for (var book in fetchedBookList) {
-            final imageUrl = book['image'];
-            final imageFileName = imageUrl.split('/').last;
-
-            final oldBook = localBookList.firstWhere(
-                  (b) => b['id'] == book['id'],
-              orElse: () => {},
-            );
-
-            bool shouldDownload = true;
-
-            if (oldBook.isNotEmpty && oldBook['image'] != null) {
-              final oldImageUrl = oldBook['image'];
-              if (oldImageUrl != imageUrl) {
-                final oldImageFile = oldImageUrl.split('/').last;
-                await deleteLocalFile(oldImageFile);
-              } else {
-                shouldDownload = false;
-                final existingPath = await _localFile(imageFileName);
-                if (await existingPath.exists()) {
-                  book['image'] = existingPath.path;
-                }
-              }
-            }
-
-            if (shouldDownload) {
-              final localPath = await downloadAndSaveFile(imageUrl, imageFileName);
-              if (localPath != null) {
-                book['image'] = localPath;
-              }
-            }
-          }
-
-          // 🔽 Save and assign updated lists
+        // 🔹 Step 4: Only update if data has changed
+        if (!_isSameData(BookList, fetchedBookList)) {
+          await _processListUpdates(BookList, fetchedBookList);
+          await _processImages(fetchedBookList, BookList);
           BookList = fetchedBookList;
-          LecturesList = fetchedLecturesList;
-          BlogList = fetchedBlogList;
-
           await prefs.setString('book_list', jsonEncode(BookList));
-          await prefs.setString('lecture_list', jsonEncode(LecturesList));
-          await prefs.setString('blog_list', jsonEncode(BlogList));
-
-          print('✅ Data updated successfully from server');
-          return;
+          print('📘 BookList updated');
         }
-      } catch (e) {
-        print('❌ API fetch error: $e');
-      }
-    }
 
-    // 🔽 No internet or failed fetch, load from local
-    BookList = localBookList;
-    LecturesList = localLecturesList;
-    BlogList = localBlogList;
-    print('ℹ️ Loaded data from local storage');
+        if (!_isSameData(LecturesList, fetchedLecturesList)) {
+          await _processListUpdates(LecturesList, fetchedLecturesList);
+          LecturesList = fetchedLecturesList;
+          await prefs.setString('lecture_list', jsonEncode(LecturesList));
+          print('📺 Lectures updated');
+        }
+
+        if (!_isSameData(BlogList, fetchedBlogList)) {
+          await _processListUpdates(BlogList, fetchedBlogList);
+          BlogList = fetchedBlogList;
+          await prefs.setString('blog_list', jsonEncode(BlogList));
+          print('📰 Blogs updated');
+        }
+      }
+    } catch (e) {
+      print('❌ Failed to fetch from API: $e');
+    }
   }
+
 
   static List<Map<String, dynamic>> _loadLocalData(
       SharedPreferences prefs,

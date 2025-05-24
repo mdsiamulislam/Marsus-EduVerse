@@ -23,6 +23,7 @@ dependencies:
   upgrader: ^11.3.2
   shimmer: ^3.0.0
   animated_snack_bar: ^0.4.0
+  share_plus: ^7.2.1
 
 
 dev_dependencies:

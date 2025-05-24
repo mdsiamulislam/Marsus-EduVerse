@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+// import 'package:open_file/open_file.dart';
 
 class CustomPdfViewerPage extends StatefulWidget {
   final String pdfUrl;
   final String bookName;
 
-  const CustomPdfViewerPage({required this.pdfUrl , required this.bookName});
+  const CustomPdfViewerPage({required this.pdfUrl, required this.bookName});
 
   @override
   _CustomPdfViewerPageState createState() => _CustomPdfViewerPageState();
@@ -18,10 +19,12 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
   String? localPath;
   bool fileDownloaded = false;
   bool errorOccurred = false;
+  bool isPDFReady = false;
+  bool isDarkMode = false;
 
   int totalPages = 0;
   int currentPage = 0;
-  bool isPDFReady = false;
+  late PDFViewController pdfController;
 
   @override
   void initState() {
@@ -42,7 +45,6 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
         });
       } else {
         final response = await Dio().download(widget.pdfUrl, file.path);
-
         if (response.statusCode == 200) {
           setState(() {
             localPath = file.path;
@@ -60,6 +62,38 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
     }
   }
 
+  void _showJumpToPageDialog() {
+    TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Jump to Page"),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: "Enter page number (1 - $totalPages)",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              int? page = int.tryParse(controller.text);
+              if (page != null && page > 0 && page <= totalPages) {
+                Navigator.of(context).pop();
+                await pdfController.setPage(page - 1);
+                setState(() {
+                  currentPage = page - 1;
+                });
+              }
+            },
+            child: Text("Go"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (errorOccurred) {
@@ -72,22 +106,33 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.bookName),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.find_in_page), // Jump to Page
+            tooltip: "Jump to Page",
+            onPressed: _showJumpToPageDialog,
+          ),
+        ],
       ),
       body: fileDownloaded && localPath != null
           ? Stack(
         children: [
           PDFView(
             filePath: localPath!,
-            autoSpacing: true,
             enableSwipe: true,
             swipeHorizontal: false,
-            onViewCreated: (controller) {
-            },
+            autoSpacing: false, // reduce margin
+            pageSnap: true,
+            fitEachPage: false,
+            nightMode: isDarkMode,
             onRender: (_pages) {
               setState(() {
                 totalPages = _pages!;
                 isPDFReady = true;
               });
+            },
+            onViewCreated: (controller) {
+              pdfController = controller;
             },
             onPageChanged: (current, total) {
               setState(() {
@@ -101,46 +146,44 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
               });
             },
           ),
-          // Loading overlay until PDF is ready
           if (!isPDFReady)
             Container(
               color: Colors.white,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text("Loading PDF..."),
-                  ],
-                ),
+                child: CircularProgressIndicator(),
               ),
             ),
-          // Page-specific loading indicator
           if (isPDFReady)
             Positioned(
               bottom: 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  "Page ${currentPage + 1} of $totalPages",
-                  style: TextStyle(color: Colors.black87),
-                ),
+              left: 16,
+              right: 16,
+              child: Column(
+                children: [
+                  Slider(
+                    value: currentPage.toDouble(),
+                    min: 0,
+                    max: (totalPages - 1).toDouble(),
+                    onChanged: (value) async {
+                      await pdfController.setPage(value.toInt());
+                      setState(() {
+                        currentPage = value.toInt();
+                      });
+                    },
+                  ),
+                  Text(
+                    "Page ${currentPage + 1} of $totalPages",
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
       )
-          : Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text("Downloading PDF..."),
-          ],
-        ),
-      ),
+          : Center(child: CircularProgressIndicator()),
     );
   }
 }
