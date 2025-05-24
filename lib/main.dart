@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:marsus_studyhub/pages/home_screen.dart';
+import 'package:marsuseduverse/pages/home_screen.dart';
 
 void main() {
   runApp(const MyApp());

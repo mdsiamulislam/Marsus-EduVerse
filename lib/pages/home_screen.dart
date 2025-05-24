@@ -2,12 +2,15 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:upgrader/upgrader.dart';
 
+import '../utils/data_manager.dart';
 import '../widget/book_library_tab.dart';
 import '../widget/LectureTab.dart';
 import '../widget/BlogTab.dart';
 import 'AboutDialogPopup.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -24,13 +27,23 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadData();
     checkConnectivityAndSetTabs();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DataManager.updateData(context);
+    });
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData([bool fresh = false]) async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
+
+    if (fresh) {
+      await DataManager.checkAndUpdateData(context);
+    }
+
+    await Future.delayed(const Duration(milliseconds: 100));
     setState(() => _isLoading = false);
   }
+
+
 
   Future<void> checkConnectivityAndSetTabs() async {
     final connectivityResult = await Connectivity().checkConnectivity();
@@ -88,15 +101,19 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+
         body: RefreshIndicator(
-          onRefresh: _loadData,
+          onRefresh:() async {
+            await _loadData(true);
+          },
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : IndexedStack(
-            index: _currentIndex,
-            children: _tabs,
+                  index: _currentIndex,
+                  children: _tabs,
           ),
         ),
+
         bottomNavigationBar: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: Container(
@@ -110,13 +127,17 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+
             child: BottomNavigationBar(
+
               currentIndex: _currentIndex,
               selectedItemColor: Colors.green,
               unselectedItemColor: Colors.grey,
               backgroundColor: Colors.white,
               elevation: 0,
               type: BottomNavigationBarType.fixed,
+
+
               selectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,

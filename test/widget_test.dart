@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:marsus_studyhub/pages/home_screen.dart';
+import 'package:marsuseduverse/pages/home_screen.dart';
 
 
 void main() {

@@ -29,7 +29,6 @@ class DataManager {
       final file = await _localFile(filename);
       if (await file.exists()) {
         await file.delete();
-        print('Deleted file: $filename');
       }
     } catch (e) {
       print('Error deleting file $filename: $e');
@@ -143,6 +142,67 @@ class DataManager {
       }
     } catch (e) {
       print('❌ Failed to fetch from API: $e');
+    }
+  }
+
+  static Future<void> updateData(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+
+
+
+    // 🔹 Step 3: Fetch from server in background
+    try {
+      final response = await http.get(Uri.parse(
+        'https://script.google.com/macros/s/AKfycbz24xdGvbElygR1B24k8MQf0DKcrcAtoPn0VMI2VopmUjL7JqM7O38R98ivENqCEtjhJQ/exec',
+      ));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final fetchedBookList = List<Map<String, dynamic>>.from(data['BookList']);
+        final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
+        final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
+
+        // 🔹 Step 4: Only update if data has changed
+        if (!_isSameData(BookList, fetchedBookList)) {
+          await _processListUpdates(BookList, fetchedBookList);
+          await _processImages(fetchedBookList, BookList);
+          BookList = fetchedBookList;
+          await prefs.setString('book_list', jsonEncode(BookList));
+          print('📘 BookList updated');
+        }
+
+        if (!_isSameData(LecturesList, fetchedLecturesList)) {
+          await _processListUpdates(LecturesList, fetchedLecturesList);
+          LecturesList = fetchedLecturesList;
+          await prefs.setString('lecture_list', jsonEncode(LecturesList));
+          print('📺 Lectures updated');
+        }
+
+        if (!_isSameData(BlogList, fetchedBlogList)) {
+          await _processListUpdates(BlogList, fetchedBlogList);
+          BlogList = fetchedBlogList;
+          await prefs.setString('blog_list', jsonEncode(BlogList));
+          print('📰 Blogs updated');
+        }
+      }
+    } catch (e) {
+      print('❌ Failed to fetch from API: $e');
+    }
+  }
+
+  static Future<void> loadDataFromDevice(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final connectivityResult = await Connectivity().checkConnectivity();
+
+    // 🔹 Step 1: Load local data first and show instantly
+    BookList = _loadLocalData(prefs, 'book_list', fallbackBookList);
+    LecturesList = _loadLocalData(prefs, 'lecture_list', fallbackLecturesList);
+    BlogList = _loadLocalData(prefs, 'blog_list', fallbackBlogList);
+    print('✅ Local data loaded');
+
+    // 🔹 Step 2: If no internet, stop here silently
+    if (connectivityResult == ConnectivityResult.none) {
+      return;
     }
   }
 

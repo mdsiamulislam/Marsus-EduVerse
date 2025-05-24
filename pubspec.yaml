@@ -1,5 +1,5 @@
-name: marsus_studyhub
-description: A new Flutter project.
+name: marsuseduverse
+description: Your Comprehensive Islamic Learning Companion A Flutter-based mobile application delivering authentic Islamic education through
 
 publish_to: 'none'
 
@@ -11,7 +11,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
   youtube_player_iframe: ^4.0.4
   dio: ^5.4.0
   path_provider: ^2.1.1

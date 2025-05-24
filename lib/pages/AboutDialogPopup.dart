@@ -63,7 +63,6 @@ class AboutDialogPopup extends StatelessWidget {
         text,
         style: const TextStyle(
           color: Colors.blue,
-          decoration: TextDecoration.underline,
         ),
       ),
     );
