@@ -1,11 +1,15 @@
+import 'dart:async';
+import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:marsuseduverse/widget/BlogTab.dart';
+import 'package:marsuseduverse/widget/LectureTab.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upgrader/upgrader.dart';
 
 import '../utils/data_manager.dart';
 import '../widget/book_library_tab.dart';
-import '../widget/LectureTab.dart';
-import '../widget/BlogTab.dart';
+import '../widget/no_internet_tab.dart';
 import 'AboutDialogPopup.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,49 +24,112 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _hasInternet = false;
 
-  late List<Widget> _tabs;
+  List<Widget> _tabs = [const BookLibraryTab(hasInternet: false)]; // Default fallback tab
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-    checkConnectivityAndSetTabs();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      DataManager.updateData(context);
+    _initializeTabs();
+    _setupConnectivityListener();
+    _checkNewUser();
+  }
+
+  void _setupConnectivityListener() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+      final newInternetStatus = result != ConnectivityResult.none;
+      if (newInternetStatus != _hasInternet) {
+        _handleConnectivityChange(newInternetStatus);
+      }
     });
+  }
+
+  Future<void> _handleConnectivityChange(bool newInternetStatus) async {
+    setState(() {
+      _hasInternet = newInternetStatus;
+    });
+    await _initializeTabs();
+
+    // If internet is restored, refresh data
+    if (newInternetStatus) {
+      await _loadData(true);
+    }
+  }
+
+  Future<void> _initializeTabs() async {
+    final tabs = [
+      BookLibraryTab(hasInternet: _hasInternet),
+      if (_hasInternet) const LectureTab(),
+      if (_hasInternet) const Blogtab(),
+      if (!_hasInternet) const NoInternetTab(),
+    ];
+
+    if (mounted) {
+      setState(() {
+        _tabs = tabs;
+        // Reset to first tab if current index is invalid after tab change
+        if (_currentIndex >= tabs.length) {
+          _currentIndex = 0;
+        }
+      });
+    }
+  }
+
+  Future<void> _checkNewUser() async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isNewUser = prefs.getBool('newUser') ?? true;
+
+      if (isNewUser) {
+        await DataManager.updateData(context);
+        await prefs.setBool('newUser', false);
+      } else {
+        await _loadData();
+      }
+    } catch (e) {
+      debugPrint('Error checking new user: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _loadData([bool fresh = false]) async {
-    setState(() => _isLoading = true);
+    if (!_hasInternet) return;
 
-    if (fresh) {
-      await DataManager.checkAndUpdateData(context);
+    if (mounted) {
+      setState(() => _isLoading = true);
     }
 
-    await Future.delayed(const Duration(milliseconds: 100));
-    setState(() => _isLoading = false);
+    try {
+      await DataManager.checkAndUpdateData(context);
+
+      // 🟢 রিফ্রেশের পর ট্যাব আপডেট করুন
+      await _initializeTabs();
+    } catch (e) {
+      debugPrint('Error loading data: $e');
+      if (mounted) {
+        AnimatedSnackBar.material(
+          'Failed to load data.',
+          type: AnimatedSnackBarType.error,
+          duration: const Duration(seconds: 3),
+          mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+        ).show(context);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
 
-
-  Future<void> checkConnectivityAndSetTabs() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    _hasInternet = connectivityResult != ConnectivityResult.none;
-
-    setState(() {
-      _tabs = [
-        BookLibraryTab(),
-        if (_hasInternet) LectureTab(),
-        if (_hasInternet) Blogtab(),
-        if (!_hasInternet)
-          Center(
-            child: Text(
-              'No Internet Connection',
-              style: TextStyle(fontSize: 18, color: Colors.red),
-            ),
-          ),
-      ];
-    });
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -100,88 +167,74 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ],
+          leading: IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => _loadData(true),
+          ),
         ),
-
         body: RefreshIndicator(
-          onRefresh:() async {
-            await _loadData(true);
-          },
+          onRefresh: () async => await _loadData(true),
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : IndexedStack(
-                  index: _currentIndex,
-                  children: _tabs,
+            index: _currentIndex,
+            children: _tabs,
           ),
         ),
+        bottomNavigationBar: _buildBottomNavBar(),
+      ),
+    );
+  }
 
-        bottomNavigationBar: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 8,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-
-            child: BottomNavigationBar(
-
-              currentIndex: _currentIndex,
-              selectedItemColor: Colors.green,
-              unselectedItemColor: Colors.grey,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              type: BottomNavigationBarType.fixed,
-
-
-              selectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w400,
-                fontSize: 12,
-              ),
-              onTap: (index) {
-                if (_currentIndex != index) {
-                  setState(() => _currentIndex = index);
-                }
-              },
-              items: _hasInternet
-                  ? [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.menu_book_rounded),
-                  label: 'Reading',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.play_circle_fill_rounded),
-                  label: 'Lectures',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.article_rounded),
-                  label: 'Blogs',
-                ),
-              ]
-                  : [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.menu_book_rounded),
-                  label: 'Reading',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.warning_amber_rounded),
-                  label: 'No Internet',
-                ),
-              ],
-            ),
-          ),
+  Widget _buildBottomNavBar() {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
         ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w400,
+          fontSize: 12,
+        ),
+        onTap: (index) {
+          if (index < _tabs.length) {
+            setState(() => _currentIndex = index);
+          }
+        },
+        items: _hasInternet
+            ? const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_rounded),
+            label: 'Reading',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle_fill_rounded),
+            label: 'Lectures',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.article_rounded),
+            label: 'Blogs',
+          ),
+        ]
+            : const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_rounded),
+            label: 'Reading',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.wifi_off),
+            label: 'Offline',
+          ),
+        ],
       ),
     );
   }
 }
-
-

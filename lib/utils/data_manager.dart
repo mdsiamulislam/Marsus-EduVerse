@@ -63,10 +63,14 @@ class DataManager {
       final imageUrl = item['image'];
       final fileName = imageUrl.split('/').last;
 
-      final oldItem = oldList.firstWhere((e) => e['id'] == item['id'], orElse: () => {});
+      final oldItem = oldList.firstWhere(
+            (e) => e['id'] == item['id'],
+        orElse: () => <String, dynamic>{}, // Make sure type matches
+      );
+
       bool shouldDownload = true;
 
-      if (oldItem.isNotEmpty && oldItem['image'] != null) {
+      if (oldItem.containsKey('image') && oldItem['image'] != null) {
         if (oldItem['image'] == imageUrl) {
           shouldDownload = false;
           final existingPath = await _localFile(fileName);
@@ -87,6 +91,7 @@ class DataManager {
       }
     }
   }
+
 
 
 
@@ -117,24 +122,25 @@ class DataManager {
         final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
         final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
 
-        // 🔹 Step 4: Only update if data has changed
+        // Always process images, even if data is the same
+        await _processImages(fetchedBookList, BookList);
+        await _processImages(fetchedLecturesList, LecturesList);
+        await _processImages(fetchedBlogList, BlogList);
+
+        // 🔹 Step 4: Only update stored data if content has changed
         if (!_isSameData(BookList, fetchedBookList)) {
-          await _processListUpdates(BookList, fetchedBookList);
-          await _processImages(fetchedBookList, BookList);
           BookList = fetchedBookList;
           await prefs.setString('book_list', jsonEncode(BookList));
           print('📘 BookList updated');
         }
 
         if (!_isSameData(LecturesList, fetchedLecturesList)) {
-          await _processListUpdates(LecturesList, fetchedLecturesList);
           LecturesList = fetchedLecturesList;
           await prefs.setString('lecture_list', jsonEncode(LecturesList));
           print('📺 Lectures updated');
         }
 
         if (!_isSameData(BlogList, fetchedBlogList)) {
-          await _processListUpdates(BlogList, fetchedBlogList);
           BlogList = fetchedBlogList;
           await prefs.setString('blog_list', jsonEncode(BlogList));
           print('📰 Blogs updated');
