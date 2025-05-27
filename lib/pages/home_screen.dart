@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
 
     // If internet is restored, refresh data
     if (newInternetStatus) {
-      await _loadData(true);
+      await DataManager.loadDataFromDevice(context);
     }
   }
 
@@ -84,8 +84,6 @@ class _HomePageState extends State<HomePage> {
       if (isNewUser) {
         await DataManager.updateData(context);
         await prefs.setBool('newUser', false);
-      } else {
-        await _loadData();
       }
     } catch (e) {
       debugPrint('Error checking new user: $e');
@@ -96,34 +94,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _loadData([bool fresh = false]) async {
-    if (!_hasInternet) return;
-
-    if (mounted) {
-      setState(() => _isLoading = true);
-    }
-
-    try {
-      await DataManager.checkAndUpdateData(context);
-
-      // 🟢 রিফ্রেশের পর ট্যাব আপডেট করুন
-      await _initializeTabs();
-    } catch (e) {
-      debugPrint('Error loading data: $e');
-      if (mounted) {
-        AnimatedSnackBar.material(
-          'Failed to load data.',
-          type: AnimatedSnackBarType.error,
-          duration: const Duration(seconds: 3),
-          mobileSnackBarPosition: MobileSnackBarPosition.bottom,
-        ).show(context);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
 
 
   @override
@@ -169,11 +139,19 @@ class _HomePageState extends State<HomePage> {
           ],
           leading: IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => _loadData(true),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();  // This clears all data in SharedPreferences
+              _checkNewUser();
+              print('All SharedPreferences data cleared!');
+            },
+
           ),
         ),
         body: RefreshIndicator(
-          onRefresh: () async => await _loadData(true),
+          onRefresh: () {
+            return DataManager.updateData(context);
+          },
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : IndexedStack(

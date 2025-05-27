@@ -168,6 +168,8 @@ class DataManager {
         final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
         final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
 
+
+
         // 🔹 Step 4: Only update if data has changed
         if (!_isSameData(BookList, fetchedBookList)) {
           await _processListUpdates(BookList, fetchedBookList);
