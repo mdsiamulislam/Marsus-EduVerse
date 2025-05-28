@@ -108,7 +108,7 @@ class _BlogtabState extends State<Blogtab> {
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                         child: Image.network(
-                          blog['image'],
+                          blog['image'] ?? '',
                           height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -144,6 +144,14 @@ class _BlogtabState extends State<Blogtab> {
                               ),
                             ),
                             const SizedBox(height: 4),
+                            Text(
+                              'By ${blog['author'] ?? 'Unknown'}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -164,9 +172,11 @@ class _BlogtabState extends State<Blogtab> {
                               ),
                             ),
                             const SizedBox(height: 8),
+                            Divider(),
                             Text(
                               blog['description'],
-                              maxLines: 15,
+                              maxLines: 10,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 15,
                                 color: Colors.black87,
