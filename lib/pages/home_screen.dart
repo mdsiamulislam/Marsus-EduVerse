@@ -23,33 +23,30 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _hasInternet = false;
 
-  List<Widget> _tabs = [const BookLibraryTab(hasInternet: false)]; // Default fallback tab
+  List<Widget> _tabs = [const BookLibraryTab(hasInternet: false)];
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
-    _initializeTabs();
     _setupConnectivityListener();
     _checkNewUser();
   }
 
   void _setupConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
-      final newInternetStatus = result != ConnectivityResult.none;
-      if (newInternetStatus != _hasInternet) {
-        _handleConnectivityChange(newInternetStatus);
-      }
-    });
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((result) {
+          final newInternetStatus = result != ConnectivityResult.none;
+          if (newInternetStatus != _hasInternet) {
+            _handleConnectivityChange(newInternetStatus);
+          }
+        });
   }
 
   Future<void> _handleConnectivityChange(bool newInternetStatus) async {
-    setState(() {
-      _hasInternet = newInternetStatus;
-    });
+    _hasInternet = newInternetStatus;
     await _initializeTabs();
 
-    // If internet is restored, refresh data
     if (newInternetStatus) {
       await DataManager.loadDataFromDevice(context);
     }
@@ -66,7 +63,6 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       setState(() {
         _tabs = tabs;
-        // Reset to first tab if current index is invalid after tab change
         if (_currentIndex >= tabs.length) {
           _currentIndex = 0;
         }
@@ -81,9 +77,18 @@ class _HomePageState extends State<HomePage> {
       final isNewUser = prefs.getBool('newUser') ?? true;
 
       if (isNewUser) {
-        await DataManager.updateData(context);
+        await DataManager.syncData(
+          context: context,
+          loadLocalFirst: false,
+          checkInternet: true,
+        );
         await prefs.setBool('newUser', false);
       }
+
+      // Initial internet check
+      final connectivityResult = await Connectivity().checkConnectivity();
+      _hasInternet = connectivityResult != ConnectivityResult.none;
+      await _initializeTabs();
     } catch (e) {
       debugPrint('Error checking new user: $e');
     } finally {
@@ -92,8 +97,6 @@ class _HomePageState extends State<HomePage> {
       }
     }
   }
-
-
 
   @override
   void dispose() {
@@ -140,16 +143,26 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();  // This clears all data in SharedPreferences
+              await prefs.clear();
               _checkNewUser();
-              print('All SharedPreferences data cleared!');
+              debugPrint('All SharedPreferences data cleared!');
             },
-
           ),
         ),
         body: RefreshIndicator(
           onRefresh: () {
-            return DataManager.updateData(context);
+            setState(() => _isLoading = true);
+            return DataManager.syncData(
+              context: context,
+              loadLocalFirst: false,
+              checkInternet: true,
+            ).then((_) {
+              return _initializeTabs();
+            }).whenComplete(() {
+              if (mounted) {
+                setState(() => _isLoading = false);
+              }
+            });
           },
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())

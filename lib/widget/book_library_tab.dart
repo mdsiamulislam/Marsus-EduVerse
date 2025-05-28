@@ -26,27 +26,27 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
   void initState() {
     super.initState();
     _hasInternet = widget.hasInternet;
-    _initialize();
+    _loadLocalDataFirst();
   }
 
-  Future<void> _initialize() async {
-    await _checkConnectivity();
-    await _loadData();
-  }
-
-  Future<void> _checkConnectivity() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    setState(() {
-      _hasInternet = connectivityResult != ConnectivityResult.none;
-    });
-  }
-
-  Future<void> _loadData() async {
+  Future<void> _loadLocalDataFirst() async {
     setState(() => _isLoading = true);
     await DataManager.loadDataFromDevice(context);
-    await Future.delayed(const Duration(milliseconds: 200));
     _updateFilteredBooks();
     setState(() => _isLoading = false);
+    _checkConnectivityAndReloadIfOnline();
+  }
+
+  Future<void> _checkConnectivityAndReloadIfOnline() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    final internetAvailable = connectivityResult != ConnectivityResult.none;
+    if (internetAvailable) {
+      setState(() => _isLoading = true);
+      await DataManager.loadDataFromDevice(context); // Update with fresh data if available
+      _updateFilteredBooks();
+      setState(() => _isLoading = false);
+    }
+    setState(() => _hasInternet = internetAvailable);
   }
 
   void _updateFilteredBooks() {
@@ -62,9 +62,8 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
   void didUpdateWidget(BookLibraryTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.hasInternet != widget.hasInternet) {
-      // কানেকশন স্টেট চেঞ্জ হলে ডেটা রিলোড করুন
       _hasInternet = widget.hasInternet;
-      _loadData();
+      _checkConnectivityAndReloadIfOnline();
     }
   }
 
@@ -77,9 +76,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _filteredBooks.isEmpty
-              ? _buildEmptyState(
-                  context,
-          )
+              ? _buildEmptyState(context)
               : _buildBookGrid(_filteredBooks),
         ),
       ],
@@ -130,7 +127,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Lottie.asset(
-              'assets/empty.json', // Replace with your Lottie file
+              'assets/empty.json',
               width: 150,
               height: 150,
             ),
@@ -163,7 +160,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green, // আপনার থিম অনুযায়ী কালার
+                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -177,16 +174,15 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                             title: const Text('Confirm Clear Data'),
                             content: const Text('This will erase all app data and reset to initial state. Are you sure?'),
                             actions: [
-                            TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Confirm', style: TextStyle(color: Colors.red)),
-                    ),
-                    ]
-                    ));
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Confirm', style: TextStyle(color: Colors.red)),
+                              ),
+                            ]));
 
                     if (confirmed == true) {
                       AnimatedSnackBar.material(
@@ -196,34 +192,30 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
                         mobileSnackBarPosition: MobileSnackBarPosition.bottom,
                       ).show(context);
 
-                    try {
-                    // শেয়ার্ড প্রেফারেন্স ক্লিয়ার করুন
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.clear();
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
 
-
-                    // অ্যাপ রিস্টার্ট করার পরামর্শ দিন
-                    if (mounted) {
-                      AnimatedSnackBar.material(
-                        'App data cleared. Please restart the app',
-                        type: AnimatedSnackBarType.success,
-                        duration: const Duration(seconds: 3),
-                        mobileSnackBarPosition: MobileSnackBarPosition.bottom,
-                      ).show(context);
-                    }
-                    } catch (e) {
-                    if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error clearing data: ${e.toString()}')),
-                    );
-                    }
-                    }
+                        if (mounted) {
+                          AnimatedSnackBar.material(
+                            'App data cleared. Please restart the app',
+                            type: AnimatedSnackBarType.success,
+                            duration: const Duration(seconds: 3),
+                            mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+                          ).show(context);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error clearing data: ${e.toString()}')),
+                          );
+                        }
+                      }
                     }
                   },
                   child: const Text('Clear App Data'),
                 ),
                 const SizedBox(width: 16),
-                // Button for troubleshoot
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.green,
@@ -310,7 +302,6 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
     );
   }
 
-
   Widget _buildBookGrid(List<Map<String, dynamic>> books) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -383,7 +374,7 @@ class _BookLibraryTabState extends State<BookLibraryTab> {
 
     if (url == null || url.isEmpty) return fallbackIcon(Icons.book);
 
-    final isNetworkImage = url.startsWith('https') || url.startsWith('http') || url.startsWith('www') || url.startsWith('http://') || url.startsWith('https://') ;
+    final isNetworkImage = url.startsWith('http');
 
     if (isNetworkImage && _hasInternet) {
       return ClipRRect(

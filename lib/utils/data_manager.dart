@@ -13,16 +13,19 @@ List<Map<String, dynamic>> LecturesList = [];
 List<Map<String, dynamic>> BlogList = [];
 
 class DataManager {
+  /// 🔹 লোকাল path
   static Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }
 
+  /// 🔹 লোকাল ফাইল রিটার্ন করে
   static Future<File> _localFile(String filename) async {
     final path = await _localPath;
     return File('$path/$filename');
   }
 
+  /// 🔹 লোকাল ফাইল ডিলিট করে
   static Future<void> deleteLocalFile(String filename) async {
     if (filename.isEmpty) return;
     try {
@@ -35,6 +38,7 @@ class DataManager {
     }
   }
 
+  /// 🔹 ফাইল ডাউনলোড করে লোকাল পাথে সেভ করে
   static Future<String?> downloadAndSaveFile(String url, String filename) async {
     try {
       final file = await _localFile(filename);
@@ -51,36 +55,38 @@ class DataManager {
     return null;
   }
 
+  /// 🔹 পুরনো ও নতুন লিস্ট একি কিনা যাচাই করে
   static bool _isSameData(List<Map<String, dynamic>> oldList, List<Map<String, dynamic>> newList) {
     return jsonEncode(oldList) == jsonEncode(newList);
   }
 
+  /// 🔹 নতুন ও পুরাতন লিস্টের ভিত্তিতে ইমেজ প্রসেস করে
   static Future<void> _processImages(
       List<Map<String, dynamic>> newList,
       List<Map<String, dynamic>> oldList,
       ) async {
     for (var item in newList) {
       final imageUrl = item['image'];
+      if (imageUrl == null) continue;
+
       final fileName = imageUrl.split('/').last;
 
       final oldItem = oldList.firstWhere(
-            (e) => e['id'] == item['id'],
-        orElse: () => <String, dynamic>{}, // Make sure type matches
+            (e) => e['link'] == item['link'],
+        orElse: () => <String, dynamic>{},
       );
 
       bool shouldDownload = true;
 
-      if (oldItem.containsKey('image') && oldItem['image'] != null) {
-        if (oldItem['image'] == imageUrl) {
+      if (oldItem['image'] == imageUrl) {
+        final file = await _localFile(fileName);
+        if (await file.exists()) {
+          item['image'] = file.path;
           shouldDownload = false;
-          final existingPath = await _localFile(fileName);
-          if (await existingPath.exists()) {
-            item['image'] = existingPath.path;
-          }
-        } else {
-          final oldImageFile = oldItem['image']?.split('/').last ?? '';
-          await deleteLocalFile(oldImageFile);
         }
+      } else if (oldItem['image'] != null && oldItem['image'].toString().contains('/')) {
+        final oldFileName = oldItem['image'].toString().split('/').last;
+        await deleteLocalFile(oldFileName);
       }
 
       if (shouldDownload) {
@@ -92,71 +98,95 @@ class DataManager {
     }
   }
 
-
-
-
-  static Future<void> checkAndUpdateData(BuildContext context) async {
+  /// 🔹 লোকাল ডেটা লোড
+  static Future<void> loadDataFromDevice(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    final connectivityResult = await Connectivity().checkConnectivity();
 
-    // 🔹 Step 1: Load local data first and show instantly
     BookList = _loadLocalData(prefs, 'book_list', fallbackBookList);
     LecturesList = _loadLocalData(prefs, 'lecture_list', fallbackLecturesList);
     BlogList = _loadLocalData(prefs, 'blog_list', fallbackBlogList);
+
     print('✅ Local data loaded');
 
-    // 🔹 Step 2: If no internet, stop here silently
+    final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
-      return;
-    }
-
-    // 🔹 Step 3: Fetch from server in background
-    try {
-      final response = await http.get(Uri.parse(
-        'https://script.google.com/macros/s/AKfycbz24xdGvbElygR1B24k8MQf0DKcrcAtoPn0VMI2VopmUjL7JqM7O38R98ivENqCEtjhJQ/exec',
-      ));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final fetchedBookList = List<Map<String, dynamic>>.from(data['BookList']);
-        final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
-        final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
-
-        // Always process images, even if data is the same
-        await _processImages(fetchedBookList, BookList);
-        await _processImages(fetchedLecturesList, LecturesList);
-        await _processImages(fetchedBlogList, BlogList);
-
-        // 🔹 Step 4: Only update stored data if content has changed
-        if (!_isSameData(BookList, fetchedBookList)) {
-          BookList = fetchedBookList;
-          await prefs.setString('book_list', jsonEncode(BookList));
-          print('📘 BookList updated');
-        }
-
-        if (!_isSameData(LecturesList, fetchedLecturesList)) {
-          LecturesList = fetchedLecturesList;
-          await prefs.setString('lecture_list', jsonEncode(LecturesList));
-          print('📺 Lectures updated');
-        }
-
-        if (!_isSameData(BlogList, fetchedBlogList)) {
-          BlogList = fetchedBlogList;
-          await prefs.setString('blog_list', jsonEncode(BlogList));
-          print('📰 Blogs updated');
-        }
-      }
-    } catch (e) {
-      print('❌ Failed to fetch from API: $e');
+      print('📴 No internet connection');
     }
   }
 
-  static Future<void> updateData(BuildContext context) async {
+  /// 🔹 লোকাল ডেটা হেল্পার
+  static List<Map<String, dynamic>> _loadLocalData(
+      SharedPreferences prefs,
+      String key,
+      List<Map<String, dynamic>> fallback,
+      ) {
+    try {
+      if (prefs.containsKey(key)) {
+        final decoded = jsonDecode(prefs.getString(key)!);
+        if (decoded is List) {
+          return List<Map<String, dynamic>>.from(decoded);
+        }
+      }
+    } catch (e) {
+      print('❌ Failed to load $key from prefs: $e');
+    }
+    return fallback;
+  }
+
+  /// 🔹 পুরোনো item গুলোর পুরনো ফাইল ডিলিট করে যদি আপডেট থাকে
+  static Future<void> _processListUpdates(
+      List<Map<String, dynamic>> oldList,
+      List<Map<String, dynamic>> newList,
+      ) async {
+    for (final oldItem in oldList) {
+      final newItem = newList.firstWhere(
+            (e) => e['link'] == oldItem['link'],
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (newItem.isNotEmpty) {
+        if (newItem['image'] != oldItem['image']) {
+          final oldImage = oldItem['image'];
+          if (oldImage != null && oldImage.toString().contains('/')) {
+            final fileName = oldImage.split('/').last;
+            await deleteLocalFile(fileName);
+          }
+        }
+
+        if (newItem['link'] != oldItem['link']) {
+          final oldPdf = oldItem['link'];
+          if (oldPdf != null && oldPdf.toString().contains('/')) {
+            final fileName = oldPdf.split('/').last;
+            await deleteLocalFile(fileName);
+          }
+        }
+      }
+    }
+  }
+
+  /// 🔹 অনলাইন থেকে ফেচ করে লোকাল এবং র্যাম এ আপডেট করে
+  static Future<void> syncData({
+    required BuildContext context,
+    bool loadLocalFirst = false,
+    bool checkInternet = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
 
+    if (loadLocalFirst) {
+      BookList = _loadLocalData(prefs, 'book_list', fallbackBookList);
+      LecturesList = _loadLocalData(prefs, 'lecture_list', fallbackLecturesList);
+      BlogList = _loadLocalData(prefs, 'blog_list', fallbackBlogList);
+      print('✅ Local data loaded');
+    }
 
+    if (checkInternet) {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        print('📴 No internet connection');
+        return;
+      }
+    }
 
-    // 🔹 Step 3: Fetch from server in background
     try {
       final response = await http.get(Uri.parse(
         'https://script.google.com/macros/s/AKfycbz24xdGvbElygR1B24k8MQf0DKcrcAtoPn0VMI2VopmUjL7JqM7O38R98ivENqCEtjhJQ/exec',
@@ -164,13 +194,11 @@ class DataManager {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         final fetchedBookList = List<Map<String, dynamic>>.from(data['BookList']);
         final fetchedLecturesList = List<Map<String, dynamic>>.from(data['LecturesList '] ?? []);
         final fetchedBlogList = List<Map<String, dynamic>>.from(data['BlogList'] ?? []);
 
-
-
-        // 🔹 Step 4: Only update if data has changed
         if (!_isSameData(BookList, fetchedBookList)) {
           await _processListUpdates(BookList, fetchedBookList);
           await _processImages(fetchedBookList, BookList);
@@ -181,6 +209,7 @@ class DataManager {
 
         if (!_isSameData(LecturesList, fetchedLecturesList)) {
           await _processListUpdates(LecturesList, fetchedLecturesList);
+          await _processImages(fetchedLecturesList, LecturesList);
           LecturesList = fetchedLecturesList;
           await prefs.setString('lecture_list', jsonEncode(LecturesList));
           print('📺 Lectures updated');
@@ -188,6 +217,7 @@ class DataManager {
 
         if (!_isSameData(BlogList, fetchedBlogList)) {
           await _processListUpdates(BlogList, fetchedBlogList);
+          await _processImages(fetchedBlogList, BlogList);
           BlogList = fetchedBlogList;
           await prefs.setString('blog_list', jsonEncode(BlogList));
           print('📰 Blogs updated');
@@ -197,55 +227,4 @@ class DataManager {
       print('❌ Failed to fetch from API: $e');
     }
   }
-
-  static Future<void> loadDataFromDevice(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    final connectivityResult = await Connectivity().checkConnectivity();
-
-    // 🔹 Step 1: Load local data first and show instantly
-    BookList = _loadLocalData(prefs, 'book_list', fallbackBookList);
-    LecturesList = _loadLocalData(prefs, 'lecture_list', fallbackLecturesList);
-    BlogList = _loadLocalData(prefs, 'blog_list', fallbackBlogList);
-    print('✅ Local data loaded');
-
-    // 🔹 Step 2: If no internet, stop here silently
-    if (connectivityResult == ConnectivityResult.none) {
-      return;
-    }
-  }
-
-
-  static List<Map<String, dynamic>> _loadLocalData(
-      SharedPreferences prefs,
-      String key,
-      List<Map<String, dynamic>> fallback,
-      ) {
-    return prefs.containsKey(key)
-        ? List<Map<String, dynamic>>.from(jsonDecode(prefs.getString(key)!))
-        : fallback;
-  }
-
-  static Future<void> _processListUpdates(
-      List<Map<String, dynamic>> oldList,
-      List<Map<String, dynamic>> newList,
-      ) async {
-    for (var oldItem in oldList) {
-      final newItem = newList.firstWhere(
-            (e) => e['id'] == oldItem['id'],
-        orElse: () => {},
-      );
-
-      if (newItem.isNotEmpty) {
-        if (newItem['image'] != oldItem['image']) {
-          final oldImage = oldItem['image']?.split('/').last ?? '';
-          await deleteLocalFile(oldImage);
-        }
-        if (newItem['pdf'] != oldItem['pdf']) {
-          final oldPdf = oldItem['pdf']?.split('/').last ?? '';
-          await deleteLocalFile(oldPdf);
-        }
-      }
-    }
-  }
 }
-
