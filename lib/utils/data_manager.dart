@@ -209,7 +209,6 @@ class DataManager {
 
         if (!_isSameData(LecturesList, fetchedLecturesList)) {
           await _processListUpdates(LecturesList, fetchedLecturesList);
-          await _processImages(fetchedLecturesList, LecturesList);
           LecturesList = fetchedLecturesList;
           await prefs.setString('lecture_list', jsonEncode(LecturesList));
           print('📺 Lectures updated');
@@ -217,7 +216,6 @@ class DataManager {
 
         if (!_isSameData(BlogList, fetchedBlogList)) {
           await _processListUpdates(BlogList, fetchedBlogList);
-          await _processImages(fetchedBlogList, BlogList);
           BlogList = fetchedBlogList;
           await prefs.setString('blog_list', jsonEncode(BlogList));
           print('📰 Blogs updated');

@@ -31,7 +31,32 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _setupConnectivityListener();
     _checkNewUser();
+    _checkNewDay();
   }
+
+  Future<void> _checkNewDay() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastVisit = prefs.getString('lastVisitDate');
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+
+    if (lastVisit != today) {
+      if (_hasInternet) {
+        await DataManager.syncData(
+          context: context,
+          loadLocalFirst: false,
+          checkInternet: true,
+        );
+        await prefs.setString('lastVisitDate', today);
+        debugPrint('✅ ডেটা আজকের জন্য সিঙ্ক হয়েছে');
+      } else {
+        debugPrint('❌ ইন্টারনেট নেই, কিন্তু নতুন দিন শুরু হয়েছে — সিঙ্ক হয়নি');
+      }
+    } else {
+      debugPrint('📆 আজকের ডেটা আগেই সিঙ্ক হয়েছে');
+    }
+  }
+
+
 
   void _setupConnectivityListener() {
     _connectivitySubscription =
