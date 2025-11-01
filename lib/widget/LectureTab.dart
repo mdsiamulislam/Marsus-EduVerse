@@ -227,7 +227,7 @@ class _LectureTabState extends State<LectureTab> {
               itemBuilder: (_, __) => _buildShimmerLectureItem(),
             ),
             child: filteredLectures.isEmpty
-                ? const Center(child: Text("No lectures found."))
+                ? _buildEmptyLecturesView(context)
                 : ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               itemCount: filteredLectures.length,
@@ -239,4 +239,49 @@ class _LectureTabState extends State<LectureTab> {
       ],
     );
   }
+
+  Widget _buildEmptyLecturesView(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Nice illustration / icon
+            Icon(
+              Icons.play_circle_outline,
+              size: 80,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 20),
+
+            // Main message
+            Text(
+              "No lectures found",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+
+            // Helpful tip message
+            Text(
+              "If you're connected to the internet but still don't see any content,\n"
+                  "please tap the refresh button on the top-left of the app bar.",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey.shade600,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+
+          ],
+        ),
+      ),
+    );
+  }
+
 }

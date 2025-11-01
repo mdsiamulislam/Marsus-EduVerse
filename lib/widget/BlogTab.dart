@@ -84,12 +84,7 @@ class _BlogtabState extends State<Blogtab> {
           // Blog List
           Expanded(
             child: filteredBlogs.isEmpty
-                ? const Center(
-              child: Text(
-                'No blogs found for this tag.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
+                ? _buildEmptyLecturesView(context)
                 : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: filteredBlogs.length,
@@ -217,6 +212,50 @@ class _BlogtabState extends State<Blogtab> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyLecturesView(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Nice illustration / icon
+            Icon(
+              Icons.menu_book,
+              size: 80,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 20),
+
+            // Main message
+            Text(
+              "No blogs found",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+
+            // Helpful tip message
+            Text(
+              "If you're connected to the internet but still don't see any content,\n"
+                  "please tap the refresh button on the top-left of the app bar.",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey.shade600,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+
+          ],
+        ),
       ),
     );
   }
