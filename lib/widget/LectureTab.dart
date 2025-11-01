@@ -12,7 +12,7 @@ class LectureTab extends StatefulWidget {
 }
 
 class _LectureTabState extends State<LectureTab> {
-  late YoutubePlayerController _controller;
+  YoutubePlayerController? _controller;
   String? currentVideoId;
   bool showPlayer = false;
   String searchQuery = '';
@@ -22,14 +22,6 @@ class _LectureTabState extends State<LectureTab> {
   @override
   void initState() {
     super.initState();
-    _controller = YoutubePlayerController(
-      initialVideoId: '',
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-      ),
-    );
-
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _isLoading = false);
     });
@@ -37,31 +29,48 @@ class _LectureTabState extends State<LectureTab> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   void playVideo(String videoId) {
-    setState(() {
-      currentVideoId = videoId;
-      showPlayer = true;
-      _controller.load(videoId);
-    });
+    if (_controller == null) {
+      // First-time play
+      setState(() {
+        showPlayer = true;
+        currentVideoId = videoId;
+        _controller = YoutubePlayerController(
+          initialVideoId: videoId,
+          flags: const YoutubePlayerFlags(autoPlay: true, mute: false),
+        );
+      });
+    } else {
+      // Change video instantly without recreating controller
+      _controller!.load(videoId);
+      setState(() {
+        currentVideoId = videoId;
+        showPlayer = true;
+      });
+    }
   }
 
   List<Map<String, dynamic>> get filteredLectures {
     return LecturesList.where((lecture) {
       final query = searchQuery.toLowerCase();
-      final matchesSearch = (lecture['title'] ?? '').toLowerCase().contains(query) ||
-          (lecture['tag'] ?? '').toLowerCase().contains(query) ||
-          (lecture['subtitle'] ?? '').toLowerCase().contains(query);
+      final matchesSearch =
+          (lecture['title'] ?? '').toLowerCase().contains(query) ||
+              (lecture['tag'] ?? '').toLowerCase().contains(query) ||
+              (lecture['subtitle'] ?? '').toLowerCase().contains(query);
       final matchesTag = selectedTag == 'All' || lecture['tag'] == selectedTag;
       return matchesSearch && matchesTag;
     }).toList();
   }
 
   List<String> get allTags {
-    final tags = LecturesList.map((e) => e['tag']).whereType<String>().toSet().toList();
+    final tags = LecturesList.map((e) => e['tag'])
+        .whereType<String>()
+        .toSet()
+        .toList();
     tags.sort();
     return ['All', ...tags];
   }
@@ -79,13 +88,26 @@ class _LectureTabState extends State<LectureTab> {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+              borderRadius:
+              const BorderRadius.horizontal(left: Radius.circular(12)),
               child: Image.network(
                 thumbnailUrl,
                 width: 130,
                 height: 90,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 50),
+                errorBuilder: (_, __, ___) =>
+                const Icon(Icons.broken_image, size: 50),
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    width: 130,
+                    height: 90,
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
               ),
             ),
             Expanded(
@@ -96,7 +118,8 @@ class _LectureTabState extends State<LectureTab> {
                   children: [
                     Text(
                       lecture['title'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -108,14 +131,17 @@ class _LectureTabState extends State<LectureTab> {
                     const SizedBox(height: 4),
                     if (lecture.containsKey('tag'))
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.green, width: 1.5),
+                          border:
+                          Border.all(color: Colors.green, width: 1.5),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           lecture['tag']!,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                       ),
                     if (lecture.containsKey('subtitle'))
@@ -123,7 +149,8 @@ class _LectureTabState extends State<LectureTab> {
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
                           lecture['subtitle']!,
-                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.grey),
                         ),
                       ),
                   ],
@@ -146,7 +173,8 @@ class _LectureTabState extends State<LectureTab> {
               decoration: InputDecoration(
                 hintText: 'Search lectures...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onChanged: (value) => setState(() => searchQuery = value),
             ),
@@ -156,7 +184,10 @@ class _LectureTabState extends State<LectureTab> {
             value: selectedTag,
             borderRadius: BorderRadius.circular(12),
             style: const TextStyle(color: Colors.black),
-            items: allTags.map((tag) => DropdownMenuItem(value: tag, child: Text(tag))).toList(),
+            items: allTags
+                .map((tag) =>
+                DropdownMenuItem(value: tag, child: Text(tag)))
+                .toList(),
             onChanged: (value) => setState(() => selectedTag = value!),
           ),
         ],
@@ -179,16 +210,14 @@ class _LectureTabState extends State<LectureTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (showPlayer)
+        if (showPlayer && _controller != null)
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: YoutubePlayer(controller: _controller),
+            child: YoutubePlayer(controller: _controller!),
           ),
-
         const SizedBox(height: 12),
         _buildSearchFilterRow(),
         const SizedBox(height: 12),
-
         Expanded(
           child: UniversalShimmer(
             isLoading: _isLoading,
