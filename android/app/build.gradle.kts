@@ -2,7 +2,7 @@ import java.util.Properties
 
 // 🟢 Load keystoreProperties from key.properties file
 val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
+//val keystorePropertiesFile = file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
@@ -37,16 +37,30 @@ android {
 
 //    signingConfigs {
 //        create("release") {
-//            storeFile = file(keystoreProperties["storeFile"] as String)
-//            storePassword = keystoreProperties["storePassword"] as String
-//            keyAlias = keystoreProperties["keyAlias"] as String
-//            keyPassword = keystoreProperties["keyPassword"] as String
+//            val storeFilePath = keystoreProperties["storeFile"] as String?
+//            val storePasswordValue = keystoreProperties["storePassword"] as String?
+//            val keyAliasValue = keystoreProperties["keyAlias"] as String?
+//            val keyPasswordValue = keystoreProperties["keyPassword"] as String?
+//
+//            if (storeFilePath.isNullOrEmpty() ||
+//                storePasswordValue.isNullOrEmpty() ||
+//                keyAliasValue.isNullOrEmpty() ||
+//                keyPasswordValue.isNullOrEmpty()) {
+//                throw GradleException("❌ Missing values in key.properties — check paths or keys!")
+//            }
+//
+//            storeFile = file(storeFilePath)
+//            storePassword = storePasswordValue
+//            keyAlias = keyAliasValue
+//            keyPassword = keyPasswordValue
 //        }
 //    }
 
+
+
     buildTypes {
-        getByName("debug") {
-//            signingConfig = signingConfigs.getByName("release")
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             isShrinkResources = false
         }
