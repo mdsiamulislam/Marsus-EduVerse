@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+
 import '../helper/universal_shimmer.dart';
 import '../utils/data_manager.dart';
 
@@ -22,11 +23,9 @@ class _LectureTabState extends State<LectureTab> {
   void initState() {
     super.initState();
     _controller = YoutubePlayerController(
-      params: const YoutubePlayerParams(
-        showControls: true,
-        showFullscreenButton: true,
-        playsInline: true,
-        enableJavaScript: true,
+      initialVideoId: '',
+      flags: const YoutubePlayerFlags(
+        autoPlay: true,
         mute: false,
       ),
     );
@@ -38,7 +37,7 @@ class _LectureTabState extends State<LectureTab> {
 
   @override
   void dispose() {
-    _controller.close();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -46,7 +45,7 @@ class _LectureTabState extends State<LectureTab> {
     setState(() {
       currentVideoId = videoId;
       showPlayer = true;
-      _controller.loadVideoById(videoId: videoId);
+      _controller.load(videoId);
     });
   }
 
