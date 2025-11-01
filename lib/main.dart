@@ -13,13 +13,7 @@ class MyApp extends StatelessWidget {
       title: 'Marsus Studyhub',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
         scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
       ),
       debugShowCheckedModeBanner: false,
       home: HomePage(),

@@ -1,15 +1,19 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
-// import 'package:open_file/open_file.dart';
 
 class CustomPdfViewerPage extends StatefulWidget {
   final String pdfUrl;
   final String bookName;
 
-  const CustomPdfViewerPage({required this.pdfUrl, required this.bookName});
+  const CustomPdfViewerPage({
+    required this.pdfUrl,
+    required this.bookName,
+    super.key,
+  });
 
   @override
   _CustomPdfViewerPageState createState() => _CustomPdfViewerPageState();
@@ -20,7 +24,6 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
   bool fileDownloaded = false;
   bool errorOccurred = false;
   bool isPDFReady = false;
-  bool isDarkMode = false;
 
   int totalPages = 0;
   int currentPage = 0;
@@ -32,6 +35,13 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
     loadPdf();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+
+  /// Download or load cached PDF
   Future<void> loadPdf() async {
     try {
       final filename = widget.pdfUrl.split('/').last;
@@ -56,18 +66,17 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
       }
     } catch (e) {
       print('PDF Load Error: $e');
-      setState(() {
-        errorOccurred = true;
-      });
+      setState(() => errorOccurred = true);
     }
   }
 
+  /// Jump to a specific page
   void _showJumpToPageDialog() {
     TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text("Jump to Page"),
+        title: const Text("Jump to Page"),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -82,12 +91,10 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
               if (page != null && page > 0 && page <= totalPages) {
                 Navigator.of(context).pop();
                 await pdfController.setPage(page - 1);
-                setState(() {
-                  currentPage = page - 1;
-                });
+                setState(() => currentPage = page - 1);
               }
             },
-            child: Text("Go"),
+            child: const Text("Go"),
           ),
         ],
       ),
@@ -97,8 +104,7 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
   @override
   Widget build(BuildContext context) {
     if (errorOccurred) {
-      return Scaffold(
-        appBar: AppBar(title: Text('Error')),
+      return const Scaffold(
         body: Center(child: Text('❌ Failed to load PDF')),
       );
     }
@@ -106,10 +112,12 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.bookName),
+        centerTitle: true,
+        elevation: 2,
         actions: [
           IconButton(
-            icon: Icon(Icons.find_in_page), // Jump to Page
-            tooltip: "Jump to Page",
+            icon: const Icon(Icons.find_in_page,
+                color: Colors.green),
             onPressed: _showJumpToPageDialog,
           ),
         ],
@@ -117,45 +125,43 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
       body: fileDownloaded && localPath != null
           ? Stack(
         children: [
+          /// The PDF Viewer
           PDFView(
             filePath: localPath!,
             enableSwipe: true,
-            swipeHorizontal: false,
-            autoSpacing: false, // reduce margin
-            pageSnap: true,
-            fitEachPage: false,
-            nightMode: isDarkMode,
+            swipeHorizontal: true, // horizontal scroll
+            autoSpacing: true, // smoother scroll
+            pageSnap: false, // continuous scrolling
+            fitEachPage: true,
             onRender: (_pages) {
               setState(() {
                 totalPages = _pages!;
                 isPDFReady = true;
               });
             },
-            onViewCreated: (controller) {
-              pdfController = controller;
-            },
+            onViewCreated: (controller) => pdfController = controller,
             onPageChanged: (current, total) {
-              setState(() {
-                currentPage = current!;
-              });
+              setState(() => currentPage = current!);
             },
             onError: (error) {
               print("PDF Render Error: $error");
-              setState(() {
-                errorOccurred = true;
-              });
+              setState(() => errorOccurred = true);
             },
           ),
+
+          /// Loading overlay
           if (!isPDFReady)
             Container(
               color: Colors.white,
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(),
               ),
             ),
+
+          /// Bottom overlay controls
           if (isPDFReady)
             Positioned(
-              bottom: 16,
+              bottom: 20,
               left: 16,
               right: 16,
               child: Column(
@@ -164,26 +170,31 @@ class _CustomPdfViewerPageState extends State<CustomPdfViewerPage> {
                     value: currentPage.toDouble(),
                     min: 0,
                     max: (totalPages - 1).toDouble(),
+                    activeColor: Colors.green,
                     onChanged: (value) async {
                       await pdfController.setPage(value.toInt());
-                      setState(() {
-                        currentPage = value.toInt();
-                      });
+                      setState(() => currentPage = value.toInt());
                     },
                   ),
-                  Text(
-                    "Page ${currentPage + 1} of $totalPages",
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Page ${currentPage + 1} of $totalPages",
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                    ],
                   ),
                 ],
               ),
             ),
         ],
       )
-          : Center(child: CircularProgressIndicator()),
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }
