@@ -1,11 +1,11 @@
 import java.util.Properties
 
 // 🟢 Load keystoreProperties from key.properties file
-val keystoreProperties = Properties()
-//val keystorePropertiesFile = file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(keystorePropertiesFile.inputStream())
-}
+//val keystoreProperties = Properties()
+////val keystorePropertiesFile = file("key.properties")
+//if (keystorePropertiesFile.exists()) {
+//    keystoreProperties.load(keystorePropertiesFile.inputStream())
+//}
 
 plugins {
     id("com.android.application")
@@ -59,10 +59,11 @@ android {
 
 
     buildTypes {
-        getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = false
-            isShrinkResources = false
+        getByName("debug") {
+//            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
+//            isMinifyEnabled = false
+//            isShrinkResources = false
         }
     }
 }
